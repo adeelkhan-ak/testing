@@ -28,15 +28,192 @@ The system uses a producer-consumer model with:
 
 ## Build Requirements
 
-- DPDK 23.x or later
-- GCC 9.0+ or Clang 10.0+
-- Linux kernel 4.4+ with hugepage support
-- Intel or AMD x86_64 processor with SSE4.2+
+### System Requirements
+
+- **Linux Kernel**: 4.4+ with hugepage support
+- **Architecture**: x86_64 with SSE4.2+ instruction set
+- **CPU**: Intel or AMD processor with NUMA support (recommended)
+- **Memory**: Minimum 4GB RAM, 8GB+ recommended for optimal performance
+- **Root Access**: Required for hugepage configuration and kernel module loading
+
+### Software Dependencies
+
+#### Core Build Tools
+- **GCC**: 9.0+ or **Clang**: 10.0+
+- **Make**: Build system
+- **pkg-config**: For dependency management
+- **Python**: 3.6+ with pyelftools
+
+#### DPDK Dependencies
+- **DPDK**: 23.11 or later
+- **Meson**: Build system (0.47.1+)
+- **Ninja**: Build backend
+- **libnuma-dev**: NUMA support library
+- **libssl-dev**: SSL/TLS support
+- **zlib1g-dev**: Compression library
+
+### Installation Guide
+
+#### Option 1: Automated Setup (Recommended)
+
+The project includes an automated setup script that handles all dependencies and configuration:
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd dpdk-tuple-filter
+
+# Run automated setup (requires sudo privileges)
+chmod +x scripts/setup.sh
+./scripts/setup.sh
+
+# The script will:
+# - Check system requirements
+# - Install all dependencies
+# - Download and build DPDK
+# - Configure hugepages
+# - Load kernel modules
+# - Build the application
+```
+
+#### Option 2: Manual Installation
+
+##### 1. Install System Dependencies
+
+**Ubuntu/Debian:**
+```bash
+sudo apt-get update
+sudo apt-get install -y build-essential gcc libnuma-dev pkg-config \
+    meson ninja-build python3 python3-pyelftools libssl-dev zlib1g-dev
+```
+
+**RHEL/CentOS:**
+```bash
+sudo yum groupinstall -y "Development Tools"
+sudo yum install -y gcc numactl-devel pkg-config meson ninja-build \
+    python3 python3-pyelftools openssl-devel zlib-devel
+```
+
+**Fedora:**
+```bash
+sudo dnf groupinstall -y "Development Tools"
+sudo dnf install -y gcc numactl-devel pkg-config meson ninja-build \
+    python3 python3-pyelftools openssl-devel zlib-devel
+```
+
+##### 2. Install DPDK
+
+```bash
+# Download DPDK 23.11
+cd /tmp
+wget https://fast.dpdk.org/rel/dpdk-23.11.tar.xz
+tar -xf dpdk-23.11.tar.xz
+cd dpdk-23.11
+
+# Configure and build DPDK
+meson setup build --prefix=/usr/local --libdir=lib
+cd build
+ninja
+sudo ninja install
+sudo ldconfig
+```
+
+##### 3. Configure Hugepages
+
+```bash
+# Allocate hugepages (requires root)
+echo 1024 | sudo tee /proc/sys/vm/nr_hugepages
+
+# Make persistent across reboots
+echo "vm.nr_hugepages = 1024" | sudo tee -a /etc/sysctl.conf
+
+# Mount hugepage filesystem
+sudo mkdir -p /mnt/huge
+sudo mount -t hugetlbfs hugetlbfs /mnt/huge
+
+# Add to fstab for persistence
+echo "hugetlbfs /mnt/huge hugetlbfs defaults 0 0" | sudo tee -a /etc/fstab
+```
+
+##### 4. Load Kernel Modules
+
+```bash
+# Load required kernel modules
+sudo modprobe uio
+sudo modprobe uio_pci_generic
+
+# Make persistent across reboots
+echo "uio" | sudo tee -a /etc/modules
+echo "uio_pci_generic" | sudo tee -a /etc/modules
+```
+
+##### 5. Build Application
+
+```bash
+# Return to project directory
+cd /path/to/dpdk-tuple-filter
+
+# Verify DPDK installation
+pkg-config --exists libdpdk && echo "DPDK found" || echo "DPDK not found"
+
+# Build the application
+make all
+
+# Or build with debug symbols
+make debug
+```
+
+### Verification
+
+After installation, verify the setup:
+
+```bash
+# Check hugepages
+cat /proc/sys/vm/nr_hugepages
+
+# Check kernel modules
+lsmod | grep uio
+
+# Check DPDK installation
+pkg-config --modversion libdpdk
+
+# Verify application build
+ls -la build/tuple_filter
+```
+
+### Troubleshooting
+
+#### Common Issues
+
+**DPDK not found:**
+```bash
+# Ensure pkg-config can find DPDK
+export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
+sudo ldconfig
+```
+
+**Insufficient hugepages:**
+```bash
+# Check available memory
+cat /proc/meminfo | grep HugePages
+# Increase allocation if needed
+echo 2048 | sudo tee /proc/sys/vm/nr_hugepages
+```
+
+**Permission denied errors:**
+```bash
+# Ensure proper permissions for hugepages
+sudo chmod 666 /dev/hugepages/*
+```
 
 ## Quick Start
 
 ```bash
-make setup     # Install dependencies and configure hugepages
-make build     # Compile the application
+# Using automated setup
+./scripts/setup.sh
+
+# Manual build process
+make setup     # Configure hugepages and kernel modules
+make all       # Compile the application
 make run       # Run with default configuration
 ```
