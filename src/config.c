@@ -394,7 +394,7 @@ config_init(struct app_context *ctx, int argc, char **argv)
 void
 config_destroy(struct app_context *ctx)
 {
-    RTE_UNUSED(ctx);
+    RTE_SET_USED(ctx);
     
     /* Free allocated strings */
     if (g_config.rules_file) {

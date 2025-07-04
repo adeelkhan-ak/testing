@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <rte_common.h>
+#include <rte_errno.h>
+#include <rte_string_fns.h>
 #include <rte_ether.h>
 #include <rte_ip.h>
 #include <rte_tcp.h>
@@ -14,6 +16,7 @@
 #include <rte_mempool.h>
 #include <rte_mbuf.h>
 #include <rte_lcore.h>
+#include <rte_rwlock.h>
 
 /* Configuration constants */
 #define MAX_RX_QUEUE_PER_LCORE 16
@@ -40,6 +43,18 @@
 #define USE_CUCKOO_HASH 1
 #define USE_HOPSCOTCH_HASH 2
 #define HASH_TYPE USE_CUCKOO_HASH
+
+/* Hash table statistics structure (not available in DPDK 23.11) */
+struct rte_hash_stats {
+    uint64_t used_slots;
+    uint64_t free_slots;
+    uint64_t add_count;
+    uint64_t lookup_count;
+    uint64_t delete_count;
+    uint64_t add_no_free_slot;
+    uint64_t lookup_miss;
+    uint64_t lookup_hit_but_key_unused;
+};
 
 /* 5-tuple structure for packet classification */
 struct five_tuple {
@@ -201,6 +216,9 @@ tuple_hash_func(const void *key, uint32_t key_len, uint32_t init_val)
 {
     const struct five_tuple *tuple = key;
     uint32_t hash = init_val;
+    
+    /* Suppress unused parameter warning - key_len is not used for fixed-size 5-tuple */
+    RTE_SET_USED(key_len);
     
     /* Optimized hash for 5-tuple */
     hash = rte_jhash_32b((const uint32_t *)tuple, 

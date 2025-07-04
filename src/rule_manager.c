@@ -119,7 +119,7 @@ rule_manager_init(struct app_context *ctx)
 void
 rule_manager_destroy(struct app_context *ctx)
 {
-    RTE_UNUSED(ctx);
+    RTE_SET_USED(ctx);
     
     if (g_rule_mgr.op_queue) {
         rte_ring_free(g_rule_mgr.op_queue);

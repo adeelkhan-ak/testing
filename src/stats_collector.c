@@ -94,7 +94,7 @@ stats_collector_init(struct app_context *ctx)
 void
 stats_collector_destroy(struct app_context *ctx)
 {
-    RTE_UNUSED(ctx);
+    RTE_SET_USED(ctx);
     
     g_stats_ctx.enabled = false;
     memset(&g_stats_ctx, 0, sizeof(g_stats_ctx));
@@ -108,7 +108,7 @@ void
 stats_collector_update(struct app_context *ctx, unsigned lcore_id,
                       uint64_t rx_pkts, uint64_t tx_pkts, uint64_t dropped)
 {
-    RTE_UNUSED(ctx);
+    RTE_SET_USED(ctx);
     
     if (!g_stats_ctx.enabled || lcore_id >= RTE_MAX_LCORE) {
         return;

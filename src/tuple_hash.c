@@ -13,6 +13,7 @@
 #include <rte_jhash.h>
 #include <rte_cycles.h>
 #include <rte_prefetch.h>
+#include <rte_cpuflags.h>
 
 #include "tuple_filter.h"
 
@@ -37,7 +38,7 @@ tuple_hash_crc32(const void *key, uint32_t key_len, uint32_t init_val)
     uint32_t hash = init_val;
     
     /* Use CRC32 for better distribution if available */
-    if (rte_hash_crc32_alg == CRC32_SSE42) {
+    if (rte_cpu_get_flag_enabled(RTE_CPUFLAG_SSE4_2)) {
         hash = rte_hash_crc_4byte(tuple->src_ip, hash);
         hash = rte_hash_crc_4byte(tuple->dst_ip, hash);
         hash = rte_hash_crc_2byte(tuple->src_port, hash);
@@ -156,8 +157,7 @@ tuple_hash_add_rule(struct app_context *ctx, const struct filter_rule *rule)
     /* Add new rule */
     pos = rte_hash_add_key(ctx->rule_hash, &rule->tuple);
     if (pos < 0) {
-        RTE_LOG(ERR, TUPLE_HASH, "Failed to add rule: %s\n",
-                rte_strerror(-pos));
+        RTE_LOG(ERR, TUPLE_HASH, "Failed to add rule: %d\n", pos);
         ret = pos;
         goto unlock;
     }
@@ -204,8 +204,7 @@ tuple_hash_del_rule(struct app_context *ctx, const struct five_tuple *tuple)
     /* Delete from hash table */
     ret = rte_hash_del_key(ctx->rule_hash, tuple);
     if (ret < 0) {
-        RTE_LOG(ERR, TUPLE_HASH, "Failed to delete rule: %s\n",
-                rte_strerror(-ret));
+        RTE_LOG(ERR, TUPLE_HASH, "Failed to delete rule: %d\n", ret);
         goto unlock;
     }
     
@@ -290,7 +289,8 @@ tuple_hash_get_stats(struct app_context *ctx, struct rte_hash_stats *stats)
 {
     if (ctx && ctx->rule_hash && stats) {
         rte_rwlock_read_lock(&g_hash_params.rwlock);
-        rte_hash_stats_get(ctx->rule_hash, stats);
+        /* Hash stats API not available in DPDK 23.11 - stub implementation */
+        memset(stats, 0, sizeof(struct rte_hash_stats));
         rte_rwlock_read_unlock(&g_hash_params.rwlock);
     }
 }

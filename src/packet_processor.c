@@ -58,7 +58,7 @@ packet_processor_init(struct app_context *ctx)
 void
 packet_processor_destroy(struct app_context *ctx)
 {
-    RTE_UNUSED(ctx);
+    RTE_SET_USED(ctx);
     
     /* Clear statistics */
     memset(g_pkt_stats, 0, sizeof(g_pkt_stats));
@@ -149,7 +149,7 @@ static inline int
 apply_filter_rule(struct rte_mbuf *m, const struct filter_rule *rule,
                  const struct five_tuple *pkt_tuple)
 {
-    RTE_UNUSED(m);
+    RTE_SET_USED(m);
     
     /* Check each field for match (0 means wildcard) */
     if (rule->tuple.src_ip != 0 && rule->tuple.src_ip != pkt_tuple->src_ip) {
