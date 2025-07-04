@@ -11,6 +11,7 @@
 #include <rte_ethdev.h>
 
 #include "tuple_filter.h"
+#include "yaml_config.h"
 
 #define RTE_LOGTYPE_CONFIG RTE_LOGTYPE_USER6
 
@@ -28,10 +29,12 @@ struct config_params {
     bool verbose;
     char *rules_file;
     char *config_file;
+    char *yaml_config_file;
     uint32_t stats_interval;
 } __rte_cache_aligned;
 
 static struct config_params g_config;
+static struct yaml_config g_yaml_config;
 
 /* Command line option definitions */
 static struct option long_options[] = {
@@ -42,6 +45,7 @@ static struct option long_options[] = {
     {"verbose", no_argument, 0, 'v'},
     {"rules-file", required_argument, 0, 'r'},
     {"config-file", required_argument, 0, 'c'},
+    {"yaml-config", required_argument, 0, 'y'},
     {"stats-interval", required_argument, 0, 's'},
     {"help", no_argument, 0, 'H'},
     {0, 0, 0, 0}
@@ -60,6 +64,7 @@ print_usage(const char *prog_name)
     printf("  -v, --verbose            Enable verbose logging\n");
     printf("  -r, --rules-file=FILE    Load rules from file\n");
     printf("  -c, --config-file=FILE   Load configuration from file\n");
+    printf("  -y, --yaml-config=FILE   Load YAML configuration from file\n");
     printf("  -s, --stats-interval=N   Statistics collection interval in seconds (default: 5)\n");
     printf("  -H, --help               Show this help message\n");
     printf("\n");
@@ -244,7 +249,7 @@ static int
 parse_args(int argc, char **argv, struct config_params *config)
 {
     int opt, option_index;
-    const char *short_options = "p:q:h:nvr:c:s:H";
+    const char *short_options = "p:q:h:nvr:c:y:s:H";
     
     if (!config) {
         return -EINVAL;
@@ -258,6 +263,7 @@ parse_args(int argc, char **argv, struct config_params *config)
     config->verbose = false;
     config->rules_file = NULL;
     config->config_file = NULL;
+    config->yaml_config_file = NULL;
     config->stats_interval = 5;
     
     /* Parse arguments */
@@ -297,6 +303,10 @@ parse_args(int argc, char **argv, struct config_params *config)
             
         case 'c':
             config->config_file = strdup(optarg);
+            break;
+            
+        case 'y':
+            config->yaml_config_file = strdup(optarg);
             break;
             
         case 's':
@@ -346,6 +356,22 @@ config_init(struct app_context *ctx, int argc, char **argv)
         }
     }
     
+    /* Load YAML configuration file if specified */
+    if (g_config.yaml_config_file) {
+        ret = yaml_config_load(g_config.yaml_config_file, &g_yaml_config);
+        if (ret != 0) {
+            RTE_LOG(ERR, CONFIG, "Failed to load YAML configuration: %s\n", g_config.yaml_config_file);
+            return ret;
+        }
+        
+        /* Apply YAML configuration */
+        ret = yaml_config_apply(&g_yaml_config, ctx);
+        if (ret != 0) {
+            RTE_LOG(ERR, CONFIG, "Failed to apply YAML configuration\n");
+            return ret;
+        }
+    }
+    
     /* Validate configuration */
     ret = validate_portmask(g_config.port_mask);
     if (ret != 0) {
@@ -387,6 +413,10 @@ config_init(struct app_context *ctx, int argc, char **argv)
         RTE_LOG(INFO, CONFIG, "  Rules file:     %s\n", g_config.rules_file);
     }
     
+    if (g_config.yaml_config_file) {
+        RTE_LOG(INFO, CONFIG, "  YAML config:    %s\n", g_config.yaml_config_file);
+    }
+    
     return 0;
 }
 
@@ -407,8 +437,14 @@ config_destroy(struct app_context *ctx)
         g_config.config_file = NULL;
     }
     
-    /* Clear configuration */
+    if (g_config.yaml_config_file) {
+        free(g_config.yaml_config_file);
+        g_config.yaml_config_file = NULL;
+    }
+    
+    /* Clear configurations */
     memset(&g_config, 0, sizeof(g_config));
+    yaml_config_free(&g_yaml_config);
     
     RTE_LOG(INFO, CONFIG, "Configuration destroyed\n");
 }

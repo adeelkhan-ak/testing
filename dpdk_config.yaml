@@ -1,0 +1,216 @@
+# DPDK Packet Processing Configuration
+# This configuration defines NIC ports, CPU core assignments, packet processing rules, and global settings
+
+# =============================================================================
+# NIC & Port Mapping
+# =============================================================================
+ports:
+  - id: port-a
+    pci_address: "0000:03:00.0"
+    mac_address: "aa:bb:cc:dd:ee:01"
+    description: "Primary ingress port"
+    
+  - id: port-b
+    pci_address: "0000:03:00.1"
+    mac_address: "aa:bb:cc:dd:ee:02"
+    description: "Secondary ingress port"
+    
+  - id: port-c
+    pci_address: "0000:05:00.0"
+    mac_address: "aa:bb:cc:dd:ee:03"
+    description: "Primary egress port"
+    
+  - id: port-d
+    pci_address: "0000:05:00.1"
+    mac_address: "aa:bb:cc:dd:ee:04"
+    description: "Secondary egress port"
+
+# =============================================================================
+# CPU Core Assignment
+# =============================================================================
+cpu_cores:
+  # RX Core assignments - one per input queue/port
+  rx_cores:
+    - port: port-a
+      queue: 0
+      core: 2
+      description: "RX processing for port-a"
+      
+    - port: port-a
+      queue: 1
+      core: 3
+      description: "RX processing for port-a queue 1"
+      
+    - port: port-b
+      queue: 0
+      core: 4
+      description: "RX processing for port-b"
+      
+    - port: port-b
+      queue: 1
+      core: 5
+      description: "RX processing for port-b queue 1"
+  
+  # TX Core assignments - one per output queue/port
+  tx_cores:
+    - port: port-c
+      queue: 0
+      core: 6
+      description: "TX processing for port-c"
+      
+    - port: port-c
+      queue: 1
+      core: 7
+      description: "TX processing for port-c queue 1"
+      
+    - port: port-d
+      queue: 0
+      core: 8
+      description: "TX processing for port-d"
+      
+    - port: port-d
+      queue: 1
+      core: 9
+      description: "TX processing for port-d queue 1"
+
+# =============================================================================
+# Tuple-Based Packet Processing Rules
+# =============================================================================
+rules:
+  # Rule 1: Drop SSH traffic from specific subnet
+  - id: rule-001
+    priority: 100
+    match:
+      src_ip: "192.168.1.0/24"
+      dst_ip: "*"
+      src_port: "*"
+      dst_port: 22
+      protocol: "tcp"
+    action: drop
+    description: "Drop SSH traffic from 192.168.1.0/24"
+    
+  # Rule 2: Forward HTTP traffic to port-c
+  - id: rule-002
+    priority: 200
+    match:
+      src_ip: "*"
+      dst_ip: "10.0.0.0/8"
+      src_port: "*"
+      dst_port: 80
+      protocol: "tcp"
+    action: forward
+    out_port: port-c
+    description: "Forward HTTP traffic to port-c"
+    
+  # Rule 3: Forward HTTPS traffic to port-c
+  - id: rule-003
+    priority: 200
+    match:
+      src_ip: "*"
+      dst_ip: "10.0.0.0/8"
+      src_port: "*"
+      dst_port: 443
+      protocol: "tcp"
+    action: forward
+    out_port: port-c
+    description: "Forward HTTPS traffic to port-c"
+    
+  # Rule 4: Forward DNS traffic to port-d
+  - id: rule-004
+    priority: 300
+    match:
+      src_ip: "*"
+      dst_ip: "*"
+      src_port: "*"
+      dst_port: 53
+      protocol: "udp"
+    action: forward
+    out_port: port-d
+    description: "Forward DNS traffic to port-d"
+    
+  # Rule 5: Drop traffic from blacklisted IPs
+  - id: rule-005
+    priority: 50
+    match:
+      src_ip: "203.0.113.0/24"
+      dst_ip: "*"
+      src_port: "*"
+      dst_port: "*"
+      protocol: "*"
+    action: drop
+    description: "Drop all traffic from blacklisted subnet"
+    
+  # Rule 6: Forward database traffic to port-d
+  - id: rule-006
+    priority: 250
+    match:
+      src_ip: "172.16.0.0/16"
+      dst_ip: "10.0.0.100"
+      src_port: "*"
+      dst_port: 3306
+      protocol: "tcp"
+    action: forward
+    out_port: port-d
+    description: "Forward MySQL traffic to port-d"
+    
+  # Rule 7: Default rule - forward remaining traffic to port-c
+  - id: rule-999
+    priority: 999
+    match:
+      src_ip: "*"
+      dst_ip: "*"
+      src_port: "*"
+      dst_port: "*"
+      protocol: "*"
+    action: forward
+    out_port: port-c
+    description: "Default rule - forward all remaining traffic"
+
+# =============================================================================
+# Global Settings
+# =============================================================================
+global_settings:
+  # Packet burst sizes for RX/TX operations
+  rx_burst_size: 32
+  tx_burst_size: 32
+  
+  # Memory pool configuration
+  num_mbufs: 8192
+  mbuf_size: 2048
+  mbuf_cache_size: 256
+  
+  # NUMA configuration
+  enable_numa: true
+  numa_socket: 0
+  
+  # Performance tuning
+  enable_hw_checksum: true
+  enable_rss: true
+  rss_hash_key: "default"
+  
+  # Queue configuration
+  rx_queues_per_port: 2
+  tx_queues_per_port: 2
+  rx_descriptors: 1024
+  tx_descriptors: 1024
+  
+  # Logging and monitoring
+  log_level: "info"
+  enable_stats: true
+  stats_interval: 5
+  
+  # Application-specific settings
+  app_name: "dpdk-packet-processor"
+  version: "1.0.0"
+  
+  # Memory configuration
+  memory_channels: 4
+  huge_page_size: "1G"
+  
+  # Interrupt handling
+  enable_interrupt: false
+  interrupt_timeout: 1000
+  
+  # Flow control
+  enable_flow_control: true
+  flow_control_pause_time: 0xFFFF

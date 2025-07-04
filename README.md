@@ -10,6 +10,7 @@ A high-performance packet filtering system built with DPDK (Data Plane Developme
 - **Flexible Tuple Matching**: Support for 5-tuple, custom tuple formats
 - **Zero-Copy Processing**: Minimal memory operations for maximum throughput
 - **Real-time Statistics**: Performance monitoring and rule hit statistics
+- **YAML Configuration**: Comprehensive YAML-based configuration system for advanced setups
 
 ## Architecture
 
@@ -51,6 +52,7 @@ The system uses a producer-consumer model with:
 - **libnuma-dev**: NUMA support library
 - **libssl-dev**: SSL/TLS support
 - **zlib1g-dev**: Compression library
+- **libyaml-dev**: YAML configuration parser
 
 ### Installation Guide
 
@@ -216,4 +218,19 @@ sudo chmod 666 /dev/hugepages/*
 make setup     # Configure hugepages and kernel modules
 make all       # Compile the application
 make run       # Run with default configuration
+
+# Using YAML configuration
+sudo apt-get install libyaml-dev  # Install YAML parser
+make all       # Build with YAML support
+sudo ./build/tuple_filter -l 0-7 -n 4 -- --yaml-config=dpdk_config.yaml
 ```
+
+## Configuration
+
+The application supports multiple configuration methods:
+
+1. **Command-line arguments** - For basic configuration
+2. **Simple config files** - Key-value format (backward compatible)
+3. **YAML configuration** - Comprehensive configuration system (recommended)
+
+See `YAML_CONFIG_GUIDE.md` for detailed YAML configuration documentation.
