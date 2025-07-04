@@ -12,7 +12,8 @@ SRCS = src/main.c \
        src/packet_processor.c \
        src/rule_manager.c \
        src/stats_collector.c \
-       src/config.c
+       src/config.c \
+       src/yaml_config.c
 
 # Compiler flags
 CFLAGS += -O3 -g -Wall -Wextra
@@ -23,6 +24,10 @@ CFLAGS += -I./include
 # DPDK flags
 CFLAGS += $(shell pkg-config --cflags libdpdk)
 LDFLAGS += $(shell pkg-config --libs libdpdk)
+
+# YAML library
+CFLAGS += $(shell pkg-config --cflags yaml-0.1)
+LDFLAGS += $(shell pkg-config --libs yaml-0.1)
 
 # Additional optimizations
 CFLAGS += -ffast-math -funroll-loops
@@ -75,6 +80,7 @@ install: setup
 	@echo "Installing dependencies..."
 	@which pkg-config > /dev/null || (echo "pkg-config required" && exit 1)
 	@pkg-config --exists libdpdk || (echo "DPDK not found. Install DPDK first." && exit 1)
+	@pkg-config --exists yaml-0.1 || (echo "libyaml not found. Install libyaml-dev." && exit 1)
 
 clean:
 	rm -rf $(BUILD_DIR)
